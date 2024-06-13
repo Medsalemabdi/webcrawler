@@ -35,7 +35,54 @@ function getHtmlurls(HTMLBody,baseUrl){
     return urls
 }
 
+async function crawlpage(baseUrl ,currentUrl ,pages){
+    const objbaseUrl = new URL(baseUrl)
+    const objCurrentUrl= new URL(currentUrl)
+    if (objbaseUrl.hostname !== objCurrentUrl.hostname){
+        return pages
+    }
+    const ncurrentUrl = normalizeURL(currentUrl)
+    if (pages[ncurrentUrl]>0){
+        pages[ncurrentUrl]++
+        return pages
+    }
+
+    pages[ncurrentUrl] = 1
+    console.log(`crawling ${currentUrl}`)
+
+    try{
+        const respobj = await fetch(baseUrl)
+
+        if (respobj.status >399){
+            console.log(`error with status ${respobj.status}`)
+            return pages
+        }
+        const ctype = respobj.headers.get('content-type')
+
+        if (!ctype.includes('text/html')){
+            console.log(`content type is not html`)
+            return pages
+        }
+        
+        const HTMLBody = await respobj.text()
+        const nextUrls = getHtmlurls(HTMLBody,baseUrl)
+
+        for (const nextUrl of nextUrls){
+            pages = await crawlpage(baseUrl,nextUrl,pages)
+            
+        }
+        
+
+
+    }catch (err){
+        console.log(`${err.message}`)
+    }
+
+    return pages
+}
+
 module.exports = {
     normalizeURL ,
-    getHtmlurls
+    getHtmlurls , 
+    crawlpage
 }
